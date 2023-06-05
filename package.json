@@ -1,6 +1,6 @@
 {
   "name": "node-carplay",
-  "version": "3.0.5",
+  "version": "3.0.6",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rhysmorgan134/node-CarPlay.git"
+    "url": "git+https://github.com/tete1030/node-CarPlay.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/rhysmorgan134/node-CarPlay/issues"
+    "url": "https://github.com/tete1030/node-CarPlay/issues"
   },
-  "homepage": "https://github.com/rhysmorgan134/node-CarPlay#readme",
+  "homepage": "https://github.com/tete1030/node-CarPlay#readme",
   "dependencies": {
     "node-microphone": "https://github.com/rhysmorgan134/node-microphone.git",
     "socket.io": "^4.5.4",

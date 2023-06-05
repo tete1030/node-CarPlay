@@ -95,6 +95,11 @@ class DongleHandler extends EventEmitter {
       invalid: 0, //'invalid',
       siri: 5, //'Siri Button',
       mic: 7, //'Car Microphone',
+      boxMic: 15, //'Box Microphone',
+      wifi5g: 25, //'5G Wifi',
+      wifi2_4g: 24, //'2.4G Wifi',
+      enableAudioTransfer: 22,
+      disableAudioTransfer: 23,
       left: 100, //'Button Left',
       right: 101, //'Button Right',
       frame: 12,
@@ -197,6 +202,7 @@ class DongleHandler extends EventEmitter {
   startUp = async () => {
     console.log("sending dpi");
     await this.sendInt(this._dpi, "/tmp/screen_dpi");
+    await this.sendInt(1, "/etc/android_work_mode");
 
     for (let i = 0; i < this._assets.length; i++) {
       await this.readFile(this._assets[i]);
@@ -204,24 +210,42 @@ class DongleHandler extends EventEmitter {
 
     await this.begin();
 
+    // send bluetoothAddress
+    // send bluetooth pin code
+
+    // Upload carplay.png
+    // UploadLocalLogoPNGPublic
+    // upload /etc/airplay.conf
+
     await this.sendInt(0, "/tmp/night_mode");
     await this.sendInt(0, "/tmp/hand_drive_mode");
     await this.sendInt(1, "/tmp/charge_mode");
+
+    await this.sendBTName("TCP BT")
+    await this.sendWifiName("TCP Wifi")
+
     await this.sendString(this._boxName, "/etc/box_name");
-    await this.sendKey("wifiEn");
-    await this.sendKey("wifiConnect");
-    setTimeout(() => {
-      console.log("enabling wifi");
-      this.sendKey("wifiEnd");
-      setTimeout(() => {
-        console.log("auto connecting");
-        this.sendKey("wifiConnect");
-      }, 1000);
-    }, 2000);
-    this.pairTimeout = setTimeout(() => {
-      console.log("no device, sending pair");
-      this.sendKey("wifiPair");
-    }, 15000);
+
+
+    await this.sendMicType(1) // Use BoxMic
+    await this.sendWifiType(5)
+    await this.sendAudioTransferMode(false)
+    await this.sendBoxAllSettings()
+
+    // await this.sendKeyAsync("wifiEn");
+    // await this.sendKeyAsync("wifiConnect");
+    // setTimeout(() => {
+    //   console.log("enabling wifi");
+    //   this.sendKey("wifiEnd");
+    //   setTimeout(() => {
+    //     console.log("auto connecting");
+    //     this.sendKey("wifiConnect");
+    //   }, 1000);
+    // }, 2000);
+    // this.pairTimeout = setTimeout(() => {
+    //   console.log("no device, sending pair");
+    //   this.sendKey("wifiPair");
+    // }, 15000);
 
     setInterval(() => {
       this.heartBeat();
@@ -237,9 +261,9 @@ class DongleHandler extends EventEmitter {
     let fps = Buffer.alloc(4);
     fps.writeUInt32LE(this._fps);
     let format = Buffer.alloc(4);
-    format.writeUInt32LE(2);
+    format.writeUInt32LE(5);
     let packetMax = Buffer.alloc(4);
-    packetMax.writeUInt32LE(49125);
+    packetMax.writeUInt32LE(49152);
     let iBox = Buffer.alloc(4);
     iBox.writeUInt32LE(2);
     let phoneMode = Buffer.alloc(4);
@@ -255,6 +279,62 @@ class DongleHandler extends EventEmitter {
     ]);
     await this.serialise(config, 1);
   };
+
+  sendBTName = async (name) => {
+    let buf = Buffer.from(name, 'utf-8');
+    if (buf.length > 16) {
+      console.error("BTName too long");
+      return;
+    }
+    await this.serialise(buf, 13);
+  }
+
+  sendWifiName = async (name) => {
+    let buf = Buffer.from(name, 'utf-8');
+    if (buf.length > 16) {
+      console.error("WifiName too long");
+      return;
+    }
+    await this.serialise(buf, 14);
+  }
+
+  sendMicType = async (type) =>{
+    if (type == 1) {
+      await this.sendKeyAsync("boxMic")
+    } else if (type == 2) {
+      console.error("unknown mic type")
+    } else {
+      await this.sendKeyAsync("mic")
+    }
+  }
+
+  sendWifiType = async (type) => {
+    if (type == 5) {
+      await this.sendKeyAsync("wifi5g")
+    } else {
+      await this.sendKeyAsync("wifi2_4g")
+    }
+  }
+
+  sendAudioTransferMode = async (mode) => {
+    if (mode) {
+      await this.sendKeyAsync("enableAudioTransfer")
+    } else {
+      await this.sendKeyAsync("disableAudioTransfer")
+    }
+  }
+
+  sendBoxAllSettings = async () => {
+    let settings = {
+      syncTime: Math.round(Date.now() / 1000),
+      mediaDelay: 300,
+      androidAutoSizeW: this._width,
+      androidAutoSizeH: this._height,
+    }
+    let buf = Buffer.from(JSON.stringify(settings))
+    await this.serialise(buf, 25)
+  }
+
 
   setPlugged = (state) => {
     this.plugged = state;
@@ -385,9 +465,23 @@ class DongleHandler extends EventEmitter {
   };
 
   sendKey = (action) => {
+    if (this._keys[action] === undefined) {
+      console.error("[Error] Unknown key: " +action)
+      return;
+    }
     let msg = Buffer.alloc(4);
     msg.writeUInt32LE(this._keys[action]);
     this.serialise(msg, 8);
+  };
+
+  sendKeyAsync = async (action) => {
+    if (this._keys[action] === undefined) {
+      console.error("[Error] Unknown key: " +action)
+      return;
+    }
+    let msg = Buffer.alloc(4);
+    msg.writeUInt32LE(this._keys[action]);
+    await this.serialise(msg, 8);
   };
 }
 
