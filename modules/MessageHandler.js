@@ -1,4 +1,4 @@
-
+const iconv = require('iconv-lite');
 
 class MessageHandler {
     constructor(updateState, plugged, quit) {
@@ -167,7 +167,7 @@ class MessageHandler {
         let length = Buffer.byteLength(data)
         if (length >= 4) {
             let phoneType = data.readUInt32LE()
-            let URL = data.toString("ISO-8859-1", 4)
+            let URL = iconv.decode(input, "iso-8859-1").toString()
             console.log("Received URL: ", URL)
         }
     }
