@@ -33,6 +33,7 @@ class DongleHandler extends EventEmitter {
     this._fps = fps;
     this._device = null;
     this._assets = [
+      "other_link.hwfs",
       "adb",
       "adb.pub",
       "helloworld0",
@@ -53,6 +54,7 @@ class DongleHandler extends EventEmitter {
       "libscreencap71.so",
       "libscreencap80.so",
       "libscreencap90.so",
+      "libscreencap100.so",
       "HWTouch.dex",
     ];
     this._magic = "aa55aa55";
@@ -206,6 +208,7 @@ class DongleHandler extends EventEmitter {
     await this.sendInt(1, "/etc/android_work_mode");
 
     for (let i = 0; i < this._assets.length; i++) {
+      console.log("=======> sending file", this._assets[i]);
       await this.readFile(this._assets[i]);
     }
 

@@ -91,6 +91,8 @@ class MessageHandler {
             1001: 'Support Auto Connect',
             1007: 'Bluetooth Connected',
             1008: 'Bluetooth Disconnected',
+            1009: 'Wifi Connected',
+            1010: 'Wifi Disconnected',
             1012: 'Support Wifi Need Ko'
         }
         let message = data.readUInt32LE(0)
