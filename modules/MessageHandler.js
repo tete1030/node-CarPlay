@@ -12,6 +12,11 @@ class MessageHandler {
             2: this.parse2,
             4: this.parse4,
             24: this.parse24,
+            13: this.parse13,
+            14: this.parse14,
+            18: this.parse18,
+            25: this.parse25,
+            1: this.parse1,
 	        0: this.parse0
         };
         this.update = updateState;
@@ -23,38 +28,7 @@ class MessageHandler {
     }
 
     callFunction = (data) => {
-        switch (this.active) {
-            case 20:
-                this.parse20(data)
-                break
-            case 8:
-                this.parse8(data)
-                break
-            case 204:
-                this.parse204(data)
-                break
-            case 10:
-                this.parse10(data)
-                break
-            case 12:
-                this.parse12(data)
-                break
-            case 2:
-                this.parse2(data)
-                break
-            case 4:
-                this.parse4()
-                break
-            case 24:
-                this.parse24(data)
-                break
-	    case 0:
-		    this.parse0()
-            console.log("received 0", data)
-		    break
-        default:
-            break
-        }
+        this.functions[this.active](data)
     }
 
     parseHeader = (type, length, data) => {
@@ -78,7 +52,6 @@ class MessageHandler {
     }
 
     parse20 = (data) => {
-        console.log("parsing 20", data)
         let a = data.readUInt32LE(0)
         let b = data.readUInt32LE(4)
         console.log("manufacturer data: ", a, b)
@@ -87,11 +60,11 @@ class MessageHandler {
     }
 
     parse8 = (data) => {
-        console.log("parsing 8", data)
         let value = {
             0: 'invalid',
             5: 'Siri Button',
             6: 'Car Microphone',
+            15: 'Box Ready',
             100: 'Button Left',
             101: 'Button Right',
             104: 'Button Select Down',
@@ -104,6 +77,7 @@ class MessageHandler {
             204: 'Button Next Track',
             205: 'Button Prev Track',
             1000: 'Support Wifi',
+            1001: 'Support Auto Connect',
             1012: 'Support Wifi Need Ko'
         }
         let message = data.readUInt32LE(0)
@@ -118,25 +92,21 @@ class MessageHandler {
     }
 
     parse204 = (data) => {
-        console.log("parsing 204", data)
         console.log("version number: ", data.toString('ascii'))
         this.update(0)
     }
 
     parse10 = (data) => {
-        console.log("parsing 10", data)
         console.log("Bluetooth address: ", data.toString('ascii'))
         this.update(0)
     }
 
     parse12 = (data) => {
-        console.log("parsing 12", data)
         console.log("Bluetooth Pin: ", data.toString('ascii'))
         this.update(0)
     }
 
     parse2 = (data) => {
-        console.log("parsing 2", data)
         let wifi = Buffer.byteLength(data)
         if (wifi === 8) {
             let phoneType = data.readUInt32LE(0)
@@ -157,19 +127,92 @@ class MessageHandler {
     }
 
     parse0 = (data) => {
-        console.log("received 0 event")
         console.log(data)
         this.update(0)
     }
 
     parse24 = (data) => {
-        console.log("parsing 24", data)
         let length = Buffer.byteLength(data)
         if (length >= 4) {
             let phoneType = data.readUInt32LE()
-            let URL = iconv.decode(input, "iso-8859-1").toString()
+            let URL = iconv.decode(data.slice(4), "iso-8859-1")
             console.log("Received URL: ", URL)
         }
+        this.update(0)
+    }
+
+    parse13 = (data) => {
+        let length = Buffer.byteLength(data)
+        if (length <= 16) {
+            let content = iconv.decode(data.slice(0, length - 1), "UTF-8")
+            console.log("Received Bluetooth Name: ", content)
+        } else {
+            console.log("Bluetooth name longer than 16")
+        }
+        this.update(0)
+    }
+
+    parse14 = (data) => {
+        let length = Buffer.byteLength(data)
+        if (length <= 16) {
+            let content = iconv.decode(data.slice(0, length - 1), "UTF-8")
+            console.log("Received Wifi Name: ", content)
+        } else {
+            console.log("Wifi name longer than 16")
+        }
+        this.update(0)
+    }
+
+    parse18 = (data) => {
+        let length = Buffer.byteLength(data)
+        let content = iconv.decode(data.slice(0, length - 1), "UTF-8")
+        console.log("Received BT Pair List: ", content.split("\n").join(","))
+        this.update(0)
+    }
+
+    parse25 = (data) => {
+        let length = Buffer.byteLength(data)
+        let content = iconv.decode(data, "iso-8859-1")
+        console.log("Received Box Info: ", content)
+        this.update(0)
+    }
+
+    parse1 = (data) => {
+        if (data == null || data == {}) {
+            console.error("No data");
+        } else {
+            let length = Buffer.byteLength(data)
+            if (length == 28) {
+                console.log("Open Success")
+                let width = data.readUInt32LE(0)
+                let height = data.readUInt32LE(4)
+                let fps = data.readUInt32LE(8)
+                let format = data.readUInt32LE(12)
+                let packetMax = data.readUInt32LE(16)
+                let iBox = data.readUInt32LE(20)
+                let phoneMode = data.readUInt32LE(24)
+                console.log(`${width}x${height}@${fps}fps format=${format} packetMax=${packetMax} iBox=${iBox} phoneMode=${phoneMode}`)
+                if (width > 4000 || height > 4000 || fps > 60) {
+                    if (iBox != 0) {
+                        // if (androidWorkMode == 3 || phoneWorkMode == 3) sendAndroidWorkModeAssets
+                        // if (!useCarMic) { sendMicType(micTypeFromPref) } else {  }
+                        
+                    } else {
+                        // setUnauthorized
+                        // EVT_BOX_VERSION_ERROR
+
+                    }
+                } else {
+                    console.error("data exception!!!")
+                }
+
+            } else if (length != 0) {
+                console.error("NULL!!!!!!")
+            } else {
+                console.error("Not a valid CMD_OPEN package, you should resend g_open")
+            }
+        }
+        this.update(0)
     }
 }
 
