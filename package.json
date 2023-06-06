@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/tete1030/node-CarPlay#readme",
   "dependencies": {
+    "iconv-lite": "^0.6.3",
     "node-microphone": "https://github.com/rhysmorgan134/node-microphone.git",
     "socket.io": "^4.5.4",
     "usb": "^2.9.0"

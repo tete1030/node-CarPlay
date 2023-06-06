@@ -11,7 +11,8 @@ class MessageHandler {
             12: this.parse12,
             2: this.parse2,
             4: this.parse4,
-	    0: this.parse0
+            24: this.parse24,
+	        0: this.parse0
         };
         this.update = updateState;
         this.bytesToRead = 0;
@@ -43,6 +44,9 @@ class MessageHandler {
                 break
             case 4:
                 this.parse4()
+                break
+            case 24:
+                this.parse24(data)
                 break
 	    case 0:
 		    this.parse0()
@@ -156,6 +160,16 @@ class MessageHandler {
         console.log("received 0 event")
         console.log(data)
         this.update(0)
+    }
+
+    parse24 = (data) => {
+        console.log("parsing 24", data)
+        let length = Buffer.byteLength(data)
+        if (length >= 4) {
+            let phoneType = data.readUInt32LE()
+            let URL = data.toString("ISO-8859-1", 4)
+            console.log("Received URL: ", URL)
+        }
     }
 }
 
