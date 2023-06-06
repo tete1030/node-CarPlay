@@ -17,6 +17,7 @@ class MessageHandler {
             18: this.parse18,
             25: this.parse25,
             1: this.parse1,
+            3: this.parse3,
 	        0: this.parse0
         };
         this.update = updateState;
@@ -24,31 +25,42 @@ class MessageHandler {
         this.bytesRead = 0;
         this.bytes = []
         this.plugged = plugged;
-	this.quit = quit;
+	    this.quit = quit;
     }
 
     callFunction = (data) => {
-        this.functions[this.active](data)
+        if (this.functions.hasOwnProperty(this.active)) {
+            this.functions[this.active](data)
+        } else {
+            console.log("unknown type: ", this.active, " with data: ", data)
+            console.log("   decode message: ", data.toString('ascii'))
+            this.update(0)
+        }
     }
 
     parseHeader = (type, length, data) => {
+        this.update(type)
+        this.active = type;
+        this.bytesToRead = length;
         if(this.functions.hasOwnProperty(type)) {
-            this.update(type)
-            this.active = type;
-            this.bytesToRead = length;
-            if(length === 0) {
-                this.parseData({})
-            }
-            console.log("parsing type: ", type, " for length: ", length, data);
+            console.log("parsing type: ", type, " for length: ", length);
         } else {
-            console.log("unkown type: ", type, " with data:: ", data)
+            console.log("unknown type: ", type, " for length: ", length)
+        }
+        if(length === 0) {
+            this.parseData(Buffer.alloc(0))
         }
     }
 
     addBytes
 
     parseData = (data) => {
-        this.callFunction(data)
+        try {
+            this.callFunction(data)
+        } catch (err) {
+            console.error(err)
+        }
+        this.update(0)
     }
 
     parse20 = (data) => {
@@ -56,7 +68,6 @@ class MessageHandler {
         let b = data.readUInt32LE(4)
         console.log("manufacturer data: ", a, b)
         this.active = null;
-        this.update(0)
     }
 
     parse8 = (data) => {
@@ -78,17 +89,20 @@ class MessageHandler {
             205: 'Button Prev Track',
             1000: 'Support Wifi',
             1001: 'Support Auto Connect',
+            1007: 'Bluetooth Connected',
+            1008: 'Bluetooth Disconnected',
             1012: 'Support Wifi Need Ko'
         }
         let message = data.readUInt32LE(0)
-        console.log("Carplay message: ", value[message])
         if(!(value[message])) {
-            console.log("test message", data.toString('ascii'))
+            console.log("Carplay message: ", data)
+            console.log("   decode message: ", data.toString('ascii'))
+        } else {
+            console.log("Carplay message: ", value[message])
         }
         if(data.readUInt32LE() === 3) {
             this.quit()
         }
-        this.update(0)
     }
 
     parse204 = (data) => {
@@ -107,14 +121,27 @@ class MessageHandler {
     }
 
     parse2 = (data) => {
-        let wifi = Buffer.byteLength(data)
-        if (wifi === 8) {
+        let phoneTypeDict = {
+            1: "AndroidMirror",
+            3: "CarPlay",
+            4: "iPhoneMirror",
+            5: "AndroidAuto",
+            6: "HiCar",
+        }
+        let length = Buffer.byteLength(data)
+        if (length === 8) {
             let phoneType = data.readUInt32LE(0)
             let wifi = data.readUInt32LE(4)
-            console.log("wifi avail, phone type: ", phoneType, " wifi: ", wifi)
+            if (phoneTypeDict.hasOwnProperty(phoneType)) {
+                phoneType = phoneTypeDict[phoneType]
+            }
+            console.log("CMD_PLUG: phoneType: ", phoneType, " wifiDeviceConnected: ", wifi)
         } else {
             let phoneType = data.readUInt32LE(0)
-            console.log("no wifi avail, phone type: ", phoneType)
+            if (phoneTypeDict.hasOwnProperty(phoneType)) {
+                phoneType = phoneTypeDict[phoneType]
+            }
+            console.log("CMD_PLUG: phoneType: ", phoneType)
         }
         this.update(0)
         this.plugged(true)
@@ -192,7 +219,7 @@ class MessageHandler {
                 let iBox = data.readUInt32LE(20)
                 let phoneMode = data.readUInt32LE(24)
                 console.log(`${width}x${height}@${fps}fps format=${format} packetMax=${packetMax} iBox=${iBox} phoneMode=${phoneMode}`)
-                if (width > 4000 || height > 4000 || fps > 60) {
+                if (width <= 4000 && height <= 4000 || fps <= 60) {
                     if (iBox != 0) {
                         // if (androidWorkMode == 3 || phoneWorkMode == 3) sendAndroidWorkModeAssets
                         // if (!useCarMic) { sendMicType(micTypeFromPref) } else {  }
@@ -205,12 +232,22 @@ class MessageHandler {
                 } else {
                     console.error("data exception!!!")
                 }
-
             } else if (length != 0) {
                 console.error("NULL!!!!!!")
             } else {
                 console.error("Not a valid CMD_OPEN package, you should resend g_open")
             }
+        }
+        this.update(0)
+    }
+
+    parse3 = (data) => {
+        let length = Buffer.byteLength(data)
+        if (length === 4) {
+            let phase = data.readUInt32LE(0)
+            console.log("CMD_PHASE: ", phase)
+        } else {
+            console.error("Invalid content for CMD_PHASE", data)
         }
         this.update(0)
     }

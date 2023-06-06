@@ -200,14 +200,16 @@ class DongleHandler extends EventEmitter {
   };
 
   startUp = async () => {
-    console.log("sending dpi");
+    console.log("=======> sending dpi");
     await this.sendInt(this._dpi, "/tmp/screen_dpi");
+    console.log("=======> sending android_work_mode");
     await this.sendInt(1, "/etc/android_work_mode");
 
     for (let i = 0; i < this._assets.length; i++) {
       await this.readFile(this._assets[i]);
     }
 
+    console.log("=======> sending g_open");
     await this.begin();
 
     // send bluetoothAddress
@@ -217,19 +219,28 @@ class DongleHandler extends EventEmitter {
     // UploadLocalLogoPNGPublic
     // upload /etc/airplay.conf
 
+    console.log("=======> sending night_mode");
     await this.sendInt(0, "/tmp/night_mode");
+    console.log("=======> sending hand_drive_mode");
     await this.sendInt(0, "/tmp/hand_drive_mode");
+    console.log("=======> sending charge_mode");
     await this.sendInt(1, "/tmp/charge_mode");
 
+    console.log("=======> sending bluetooth_name");
     await this.sendBTName("TCP BT")
+    console.log("=======> sending wifi_name");
     await this.sendWifiName("TCP Wifi")
 
+    console.log("=======> sending box_name");
     await this.sendString(this._boxName, "/etc/box_name");
 
-
+    console.log("=======> sending mic_type");
     await this.sendMicType(1) // Use BoxMic
+    console.log("=======> sending wifi_type");
     await this.sendWifiType(5)
+    console.log("=======> sending audio_transfer_mode");
     await this.sendAudioTransferMode(false)
+    console.log("=======> sending box_all_settings");
     await this.sendBoxAllSettings()
 
     // await this.sendKeyAsync("wifiEn");
@@ -253,7 +264,6 @@ class DongleHandler extends EventEmitter {
   };
 
   begin = async () => {
-    console.log("starting projection");
     let width = Buffer.alloc(4);
     width.writeUInt32LE(this._width);
     let height = Buffer.alloc(4);
