@@ -28,10 +28,26 @@ class AudioParse extends EventEmitter {
                 this._audioParse = true
             }
             this.updateState(7)
+        } else {
+            console.error("empty audio packet")
         }
     }
 
     addBytes = (bytes) => {
+        const typeMap = {
+            1: 'AUDIO_OUTPUT_START:onNaviReportStart(audioType==2)',
+            2: 'AUDIO_OUTPUT_STOP:onNaviReportStop(audioType==2)',
+            4: 'onCallStart',
+            5: 'onCallStop',
+            6: 'onNaviReportStart',
+            7: 'onNaviReportStop',
+            8: 'onSiriStart',
+            9: 'onSiriStop',
+            10: 'onMediaStart',
+            11: 'onMediaStop',
+            12: 'AUDIO_ALERT_START:onNaviReportStart',
+            13: 'AUDIO_ALERT_STOP:onNaviReportStop'
+        }
         this._bytesRead.push(bytes)
         this._bytesSize += Buffer.byteLength(bytes)
         //console.log(this._bytesSize, this._bytesToRead)
@@ -43,19 +59,29 @@ class AudioParse extends EventEmitter {
                 type = Buffer.concat(this._bytesRead)
                 type = type.readInt8(12)
                 this.type = type
+                if (typeMap[type]) {
+                    console.log("onAudioProcess:", typeMap[type])
+                } else {
+                    console.log("onAudioProcess:", type)
+                }
                 if (type === 6) {
+                    // onNaviReportStart
                     console.log("setting audio to nav")
                     this._navi = true
                 } else if (type === 7) {
+                    // onNaviReportStop
                     console.log("setting audio to pending media")
                     this._naviPendingStop = true
                 } else if (type === 2 && this._naviPendingStop) {
+                    // AUDIO_OUTPUT_STOP
                     console.log("setting audio to media now")
                     this._navi = false
                     this._naviPendingStop = false
                 } else if (type === 8 || type===4) {
+                    // onSiriStart || onCallStart
                     this._mic.start()
                 } else if (type === 9 || type===5) {
+                    // onSiriStop || onCallStop
                     this._mic.stop()
                 } else {
                     console.log("unknown audio type: ", type, this._naviPendingStop, this._navi)

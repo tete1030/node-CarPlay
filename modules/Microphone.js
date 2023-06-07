@@ -10,11 +10,11 @@ class Microphone extends EventEmitter {
             this.emit('data', data)
         })
         this.mic.on('info', (info) => {
-            console.log(info)
+            console.log("Microphone Info:", info.toString('ascii'))
         })
 
         this.mic.on('error', (error) => {
-            console.log(error)
+            console.log("Microphone Error:", error)
         })
         this.timeout;
 

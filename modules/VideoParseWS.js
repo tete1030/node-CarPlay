@@ -17,6 +17,7 @@ class VideoParseWS extends EventEmitter{
     }
 
     setActive = (bytesToRead) => {
+        // console.log("video set active", bytesToRead)
         this._bytesToRead = bytesToRead;
 
         this.updateState(6)
@@ -38,7 +39,6 @@ class VideoParseWS extends EventEmitter{
     }
 
     pipeData = () => {
-
         let fullData = Buffer.concat(this._bytesRead)
         let outputData = fullData.slice(20, this._bytesToRead)
         this.chunks.push(outputData)

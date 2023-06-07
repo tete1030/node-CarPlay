@@ -98,6 +98,8 @@ class DongleHandler extends EventEmitter {
       siri: 5, //'Siri Button',
       mic: 7, //'Car Microphone',
       boxMic: 15, //'Box Microphone',
+      enableNightMode: 16, // night mode
+      disableNightMode: 17, // disable night mode
       wifi5g: 25, //'5G Wifi',
       wifi2_4g: 24, //'2.4G Wifi',
       enableAudioTransfer: 22,
@@ -177,6 +179,7 @@ class DongleHandler extends EventEmitter {
       this.startUp();
       return true;
     } else {
+      console.log("Try find device")
       setTimeout(this.getDevice, 2000);
       return false;
     }
@@ -211,9 +214,11 @@ class DongleHandler extends EventEmitter {
       console.log("=======> sending file", this._assets[i]);
       await this.readFile(this._assets[i]);
     }
-
+        
     console.log("=======> sending g_open");
     await this.begin();
+
+    await new Promise((r) => setTimeout(r, 2000));
 
     // send bluetoothAddress
     // send bluetooth pin code
@@ -228,6 +233,8 @@ class DongleHandler extends EventEmitter {
     await this.sendInt(0, "/tmp/hand_drive_mode");
     console.log("=======> sending charge_mode");
     await this.sendInt(1, "/tmp/charge_mode");
+    // console.log("=======> sending verbose_mode");
+    // await this.setVerbose(true);
 
     console.log("=======> sending bluetooth_name");
     await this.sendBTName("TCP BT")
@@ -246,20 +253,18 @@ class DongleHandler extends EventEmitter {
     console.log("=======> sending box_all_settings");
     await this.sendBoxAllSettings()
 
-    // await this.sendKeyAsync("wifiEn");
-    // await this.sendKeyAsync("wifiConnect");
-    // setTimeout(() => {
-    //   console.log("enabling wifi");
-    //   this.sendKey("wifiEnd");
-    //   setTimeout(() => {
-    //     console.log("auto connecting");
-    //     this.sendKey("wifiConnect");
-    //   }, 1000);
-    // }, 2000);
-    // this.pairTimeout = setTimeout(() => {
-    //   console.log("no device, sending pair");
-    //   this.sendKey("wifiPair");
-    // }, 15000);
+    setTimeout(() => {
+      console.log("enabling wifi");
+      this.sendKey("wifiEn");
+      setTimeout(() => {
+        console.log("auto connecting");
+        this.sendKey("wifiConnect");
+      }, 1000);
+    }, 2000);
+    this.pairTimeout = setTimeout(() => {
+      console.log("no device, sending pair");
+      this.sendKey("wifiPair");
+    }, 15000);
 
     setInterval(() => {
       this.heartBeat();
@@ -309,6 +314,12 @@ class DongleHandler extends EventEmitter {
       return;
     }
     await this.serialise(buf, 14);
+  }
+
+  setVerbose = async (verbose) => {
+    let msg = Buffer.alloc(4);
+    msg.writeUInt32LE(verbose ? 1 : 0);
+    await this.serialise(msg, 136);
   }
 
   sendMicType = async (type) =>{
@@ -432,6 +443,7 @@ class DongleHandler extends EventEmitter {
           if (length > 0) {
             this._audioParser.setActive(length);
           } else {
+            console.error("empty audio packet")
           }
         } else if (type === 42) {
           let length = data.readUInt32LE(4);

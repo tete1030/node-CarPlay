@@ -58,7 +58,7 @@ class MessageHandler {
         try {
             this.callFunction(data)
         } catch (err) {
-            console.error(err)
+            console.error("Error:", err)
         }
         this.update(0)
     }
@@ -89,6 +89,8 @@ class MessageHandler {
             205: 'Button Prev Track',
             1000: 'Support Wifi',
             1001: 'Support Auto Connect',
+            1003: 'Scanning Devices ...',
+            1004: 'Devices Found',
             1007: 'Bluetooth Connected',
             1008: 'Bluetooth Disconnected',
             1009: 'Wifi Connected',
@@ -156,7 +158,10 @@ class MessageHandler {
     }
 
     parse0 = (data) => {
-        console.log(data)
+        if (Buffer.byteLength(data) > 0) {
+            console.log("type 0 message: ", data)
+            console.log("   decode message: ", data.toString('ascii'))
+        }
         this.update(0)
     }
 
@@ -244,10 +249,25 @@ class MessageHandler {
     }
 
     parse3 = (data) => {
+        const phaseMap = {
+            3: 'iPhone Working',
+            4: 'Wait Hotspot',
+            5: 'Wait Airplay',
+            6: 'iPhone Working',
+            8: 'Reg + iPhone Working',
+            10: 'Reg + iPhone Working',
+            11: 'CarLife Download',
+            1001: 'Hardware Error: Bluetooth',
+            1002: 'Hardware Error: Wifi'
+        }
         let length = Buffer.byteLength(data)
         if (length === 4) {
             let phase = data.readUInt32LE(0)
-            console.log("CMD_PHASE: ", phase)
+            if (phaseMap[phase]) {
+                console.log("CMD_PHASE: ", phaseMap[phase])
+            } else {
+                console.log("CMD_PHASE: ", phase)
+            }
         } else {
             console.error("Invalid content for CMD_PHASE", data)
         }
